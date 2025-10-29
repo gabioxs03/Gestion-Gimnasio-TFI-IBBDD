@@ -14,11 +14,12 @@ app.use(express.json()); // Permite al servidor entender JSON en el cuerpo de la
 const dbConfig = {
     user: 'gimnasio_user',           // El usuario que creaste en el Paso 2
     password: 'P@ssw0rdG1m',         // La contraseña que definiste en el Paso 2
-    server: 'localhost',             // Usar localhost es más estándar y robusto que el nombre de la máquina
-    port: 61709,                     // El puerto dinámico que encontraste. ¡Correcto!
+    server: 'ADMINRG-JPUFPCG\\SQLEXPRESS',
+    // port: 61709,                     // El puerto dinámico que encontraste. ¡Correcto!
     database: 'DB_TFI_GestionGim',   // El nombre correcto de tu base de datos
     options: {
-        encrypt: true, // Para Azure SQL, puede ser necesario
+        // trustedConnection: true,
+        // encrypt: true, // Para Azure SQL, puede ser necesario
         trustServerCertificate: true, // Cambia a false para producción con un certificado válido
     }
 };
