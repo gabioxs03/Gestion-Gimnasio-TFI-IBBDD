@@ -53,7 +53,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (socio.inscripciones.length > 0) {
                 socio.inscripciones.forEach(claseInscrita => {
                     const li = document.createElement('li');
-                    li.textContent = `${claseInscrita.nombre} - ${claseInscrita.descripcion}`;
+                    // Usamos innerHTML para poder agregar el botón
+                    li.innerHTML = `
+                        <span>${claseInscrita.nombre} - ${claseInscrita.descripcion}</span>
+                        <button class="btn btn-danger btn-baja-clase" data-clase-id="${claseInscrita.id}">Dar de Baja</button>
+                    `;
                     listaInscripciones.appendChild(li);
                 });
             } else {
@@ -101,6 +105,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         alert('¡Inscripción exitosa!');
                         // Disparamos el submit del formulario de nuevo para recargar los datos del socio desde el backend
+                        consultaForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                    } catch (error) {
+                        alert(`Error: ${error.message}`);
+                    }
+                }
+            }
+
+            // Manejar clic en "Dar de Baja" de una clase
+            if (e.target.classList.contains('btn-baja-clase')) {
+                const claseId = parseInt(e.target.getAttribute('data-clase-id'));
+                const claseNombre = e.target.previousElementSibling.textContent.split(' - ')[0];
+
+                if (socioActual && confirm(`¿Seguro que quieres dar de baja al socio de la clase "${claseNombre}"?`)) {
+                    try {
+                        const response = await fetch(`${API_URL}/api/inscripciones`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ socioId: socioActual.id, claseId: claseId })
+                        });
+
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.message || 'Error al dar de baja la inscripción.');
+
+                        alert(result.message);
+                        // Recargamos el panel para que se reflejen los cambios
                         consultaForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
                     } catch (error) {
                         alert(`Error: ${error.message}`);
