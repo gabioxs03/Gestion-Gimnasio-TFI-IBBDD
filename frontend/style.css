@@ -1,0 +1,135 @@
+/* Estilos generales */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+main {
+    padding: 20px;
+    max-width: 1100px;
+    margin: auto;
+}
+
+/* Header */
+header {
+    background-color: #333;
+    color: #fff;
+    padding: 1rem 20px;
+}
+
+header .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 { margin: 0; }
+header nav a, header #logout {
+    color: white;
+    text-decoration: none;
+    margin-left: 20px;
+}
+header .welcome-user {
+    display: flex;
+    align-items: center;
+}
+
+/* Botones */
+.btn {
+    display: inline-block;
+    background: #007BFF;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    text-decoration: none;
+    text-align: center;
+}
+.btn:hover { background: #0056b3; }
+.btn-primary { background-color: #007BFF; }
+.btn-secondary { background-color: #6c757d; }
+.btn-success { background-color: #28a745; }
+.btn-danger { background-color: #dc3545; }
+
+/* Página de Bienvenida (index.html) */
+.welcome-container {
+    text-align: center;
+    padding: 60px 20px;
+}
+.welcome-buttons {
+    margin-top: 30px;
+}
+.welcome-buttons .btn {
+    padding: 15px 30px;
+    margin: 0 10px;
+    font-size: 18px;
+}
+
+/* Contenedores de Formularios (login, register, inscripcion) */
+.form-container {
+    max-width: 500px;
+    margin: 40px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.form-container form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.form-container label { font-weight: bold; }
+.form-container input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+.form-container input[readonly] {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+
+/* Página de Clases (clases.html) */
+#clases h2 {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.clases-container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.clase-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    width: 300px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.clase-card h3 {
+    margin-top: 0;
+    color: #007BFF;
+}
+.clase-card .btn {
+    margin-top: 15px;
+}
+
+/* Clase para ocultar/mostrar secciones */
+.hidden {
+    display: none;
+}

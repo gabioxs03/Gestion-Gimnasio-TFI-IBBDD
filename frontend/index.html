@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gimnasio - Inscripcion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Gimnasio</h1>
+            <nav>
+                <a href="register.html">Registrar Nuevo Socio</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="form-container">
+            <h2>Consulta de Socio</h2>
+            <p>Ingresar DNI.</p>
+            <form id="consulta-socio-form">
+                <label for="socio-id">ID de Socio:</label>
+                <input type="number" id="socio-id" name="socio-id" required title="Ingresa un ID de socio válido.">
+                <button type="submit" class="btn">Consultar</button>
+            </form>
+        </div>
+
+        <!-- Esta sección se mostrará después de la consulta -->
+        <div id="panel-socio" class="hidden">
+            <h2 id="socio-nombre"></h2>
+
+            <section id="mis-inscripciones">
+                <h3>Clases a las que está Inscripto</h3>
+                <ul id="lista-inscripciones">
+                    <!-- Las inscripciones se agregarán aquí con JS -->
+                </ul>
+            </section>
+
+            <section id="clases-disponibles">
+                <h3>Clases Disponibles</h3>
+                <div id="disponibles-container" class="clases-container">
+                    <!-- Las clases disponibles se agregarán aquí con JS -->
+                </div>
+            </section>
+
+            <div id="mensaje-confirmacion" class="hidden">
+                <p>¡Inscripción confirmada con éxito!</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
