@@ -14,7 +14,7 @@ app.use(express.json()); // Permite al servidor entender JSON en el cuerpo de la
 const dbConfig = {
     user: 'gimnasio_user',           // El usuario que creaste en el Paso 2
     password: 'P@ssw0rdG1m',         // La contraseña que definiste en el Paso 2
-    server: 'ADMINRG-JPUFPCG\\SQLEXPRESS',
+    server: 'localhost\\SQLEXPRESS',
     // port: 61709,                     // El puerto dinámico que encontraste. ¡Correcto!
     database: 'DB_TFI_GestionGim',   // El nombre correcto de tu base de datos
     options: {
