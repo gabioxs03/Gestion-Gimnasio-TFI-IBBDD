@@ -14,8 +14,8 @@ app.use(express.json()); // Permite al servidor entender JSON en el cuerpo de la
 const dbConfig = {
     user: 'gimnasio_user',           // El usuario que creaste en el Paso 2
     password: 'P@ssw0rdG1m',         // La contraseña que definiste en el Paso 2
-    server: 'ADMINRG-JPUFPCG\\SQLEXPRESS',
-    // port: 61709,                     // El puerto dinámico que encontraste. ¡Correcto!
+    server: 'localhost',             // Usar localhost es más estándar y robusto que el nombre de la máquina
+    port: 1433,                     // El puerto dinámico que encontraste. ¡Correcto!
     database: 'DB_TFI_GestionGim',   // El nombre correcto de tu base de datos
     options: {
         // trustedConnection: true,
@@ -151,6 +151,40 @@ app.post('/api/inscripciones', async (req, res) => {
     } catch (err) {
         console.error('Error inesperado al ejecutar el Stored Procedure:', err);
         res.status(500).json({ message: 'Error al procesar la inscripción' });
+    }
+});
+
+/**
+ * Endpoint para dar de baja una inscripción de un socio a una clase.
+ * DELETE /api/inscripciones
+ */
+app.delete('/api/inscripciones', async (req, res) => {
+    const { socioId, claseId } = req.body;
+
+    if (!socioId || !claseId) {
+        return res.status(400).json({ message: 'Faltan socioId o claseId en el cuerpo de la petición.' });
+    }
+
+    try {
+        await poolConnect;
+        const request = pool.request();
+
+        // 1. Eliminar la inscripción
+        const resultDelete = await request
+            .input('socioId', sql.Int, socioId)
+            .input('claseId', sql.Int, claseId)
+            .query('DELETE FROM Inscripcion WHERE SocioID = @socioId AND ClaseID = @claseId');
+
+        if (resultDelete.rowsAffected[0] > 0) {
+            // El trigger TR_ActualizarCupos_BajaInscripcion se encarga de liberar el cupo.
+            res.status(200).json({ message: 'Inscripción dada de baja correctamente.' });
+        } else {
+            // Si no se afectaron filas, es porque la inscripción no existía.
+            res.status(404).json({ message: 'No se encontró la inscripción para dar de baja.' });
+        }
+    } catch (err) {
+        console.error('Error en la base de datos al dar de baja la inscripción:', err);
+        res.status(500).json({ message: 'Error al procesar la baja de la inscripción.' });
     }
 });
 
