@@ -132,4 +132,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+    else if (pagina === 'register.html') {
+        // implementar la logica para registrar un nuevo socio en register.html
+        const registroForm = document.getElementById('registro-socio-form');
+        registroForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const nombre = document.getElementById('nombre').value;
+            const apellido = document.getElementById('apellido').value;
+            const email = document.getElementById('email').value;
+
+            try {
+                const response = await fetch(`${API_URL}/api/socios`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, apellido, email })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message);
+                }
+
+                alert('¡Socio registrado con éxito!');
+                registroForm.reset();
+
+            } catch (error) {
+                alert(`Error al registrar: ${error.message}`);
+            }
+        });
+    }
+
 });

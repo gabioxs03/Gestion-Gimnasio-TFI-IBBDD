@@ -154,6 +154,37 @@ app.post('/api/inscripciones', async (req, res) => {
     }
 });
 
+/*
+ * Endpoint para registrar un nuevo socio.
+* POST /api/socios
+*/
+app.post('/api/socios', async (req, res) => {
+    const { nombre, apellido, email } = req.body;
+    if (!nombre || !apellido || !email) {
+        return res.status(400).json({ message: 'Faltan datos obligatorios: nombre, apellido o email' });
+    }
+    try {
+        await poolConnect;
+        const result = await pool.request()
+            .input('nombre', sql.VarChar(50), nombre)
+            .input('apellido', sql.VarChar(50), apellido)
+            .input('email', sql.VarChar(100), email)
+            .query(`
+                INSERT INTO Socio (Nombre, Apellido, Email, Activo)
+                VALUES (@nombre, @apellido, @email, 1);
+                SELECT SCOPE_IDENTITY() AS nuevoSocioId; -- Obtener el ID del nuevo socio
+            `);
+        const nuevoSocioId = result.recordset[0].nuevoSocioId;
+        if (nuevoSocioId) {
+            res.status(201).json({ message: 'Socio registrado exitosamente', socioId: nuevoSocioId });
+        } else {
+            res.status(500).json({ message: 'Error al obtener el ID del nuevo socio' });
+        }
+    } catch (error) {
+        console.error('Error al registrar socio:', error);
+        res.status(500).json({ message: 'Error al registrar socio' });
+    }
+});
 
 // Inicia el servidor
 app.listen(port, async () => {
