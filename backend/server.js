@@ -175,8 +175,7 @@ app.delete('/api/inscripciones', async (req, res) => {
             .query('DELETE FROM Inscripcion WHERE SocioID = @socioId AND ClaseID = @claseId');
 
         if (resultDelete.rowsAffected[0] > 0) {
-            // 2. Si se eliminó, liberar un cupo en la clase
-            await request.query('UPDATE Clase SET CuposDisponibles = CuposDisponibles + 1 WHERE ClaseID = @claseId');
+            // El trigger TR_ActualizarCupos_BajaInscripcion se encarga de liberar el cupo.
             res.status(200).json({ message: 'Inscripción dada de baja correctamente.' });
         } else {
             // Si no se afectaron filas, es porque la inscripción no existía.
