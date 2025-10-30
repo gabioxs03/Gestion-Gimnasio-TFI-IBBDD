@@ -103,14 +103,32 @@ app.get('/api/socios/:id', async (req, res) => {
 app.delete('/api/socios/:id', async (req, res) => {
     const socioId = req.params.id;
     try {
-        await poolConnect;
-        const result = await pool.request()
-            .input('socioId', sql.Int, socioId)
-            .query('DELETE FROM Socio WHERE SocioID = @socioId');
+        // Usaremos una transacción para asegurar que ambas operaciones (borrar inscripciones y dar de baja al socio)
+        // se completen correctamente. Si una falla, se revierte todo.
+        const transaction = new sql.Transaction(pool);
+        await transaction.begin();
+        const request = new sql.Request(transaction);
 
-        // El trigger INSTEAD OF hace que rowsAffected sea 0, pero la operación es exitosa.
-        // El trigger actualiza la fila, por lo que podemos confiar en que funcionó si no hay error.
-        res.status(200).json({ message: `Socio con ID ${socioId} ha sido dado de baja (inactivado).` });
+        try {
+            // 1. Borrar todas las inscripciones del socio.
+            // Esto activará el trigger TR_ActualizarCupos_BajaInscripcion para cada clase, liberando los cupos.
+            await request.input('socioIdInsc', sql.Int, socioId).query('DELETE FROM Inscripcion WHERE SocioID = @socioIdInsc');
+
+            // 2. Dar de baja lógica al socio.
+            // Esto activará el trigger TR_BajaLogica_Socio.
+            await request.input('socioIdSocio', sql.Int, socioId).query('DELETE FROM Socio WHERE SocioID = @socioIdSocio');
+
+            // Si todo fue bien, confirmamos la transacción.
+            await transaction.commit();
+
+            res.status(200).json({ message: `Socio con ID ${socioId} ha sido dado de baja y sus inscripciones han sido canceladas.` });
+
+        } catch (err) {
+            // Si algo falla, revertimos la transacción.
+            await transaction.rollback();
+            console.error('Error en la transacción de baja de socio:', err);
+            throw err; // Lanzamos el error para que lo capture el catch principal.
+        }
 
     } catch (err) {
         console.error('Error en la base de datos al dar de baja al socio:', err);
@@ -151,6 +169,41 @@ app.post('/api/inscripciones', async (req, res) => {
     } catch (err) {
         console.error('Error inesperado al ejecutar el Stored Procedure:', err);
         res.status(500).json({ message: 'Error al procesar la inscripción' });
+    }
+});
+
+/**
+ * Endpoint para dar de baja una inscripción de un socio a una clase.
+ * DELETE /api/inscripciones
+ * Esto activará el trigger TR_ActualizarCupos_BajaInscripcion
+ */
+app.delete('/api/inscripciones', async (req, res) => {
+    const { socioId, claseId } = req.body;
+
+    if (!socioId || !claseId) {
+        return res.status(400).json({ message: 'Faltan socioId o claseId en el cuerpo de la petición.' });
+    }
+
+    try {
+        await poolConnect;
+        const request = pool.request();
+
+        // 1. Intentar eliminar la inscripción.
+        const resultDelete = await request
+            .input('socioId', sql.Int, socioId)
+            .input('claseId', sql.Int, claseId)
+            .query('DELETE FROM Inscripcion WHERE SocioID = @socioId AND ClaseID = @claseId');
+
+        if (resultDelete.rowsAffected[0] > 0) {
+            // El trigger TR_ActualizarCupos_BajaInscripcion se encarga de liberar el cupo.
+            res.status(200).json({ message: 'Inscripción dada de baja correctamente.' });
+        } else {
+            // Si no se afectaron filas, es porque la inscripción no existía.
+            res.status(404).json({ message: 'No se encontró la inscripción para dar de baja.' });
+        }
+    } catch (err) {
+        console.error('Error en la base de datos al dar de baja la inscripción:', err);
+        res.status(500).json({ message: 'Error al procesar la baja de la inscripción.' });
     }
 });
 

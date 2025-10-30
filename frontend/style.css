@@ -133,3 +133,16 @@ header .welcome-user {
 .hidden {
     display: none;
 }
+
+/* Estilos para la lista de inscripciones con botón de baja */
+#lista-inscripciones li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+#lista-inscripciones .btn-baja-clase {
+    padding: 5px 10px; /* Hacemos el botón más pequeño */
+    margin-left: auto; /* Empuja el botón hacia el final de la fila */
+}
