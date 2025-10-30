@@ -53,10 +53,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (socio.inscripciones.length > 0) {
                 socio.inscripciones.forEach(claseInscrita => {
                     const li = document.createElement('li');
+                    // Usamos innerHTML para poder agregar el botón
                     li.innerHTML = `
-                    <span>${claseInscrita.nombre} - ${claseInscrita.descripcion}</span>
-                    <button class="btn btn-danger btn-baja-clase" data-clase-id="${claseInscrita.id}">Dar de Baja</button>
-                    `;      
+                        <span>${claseInscrita.nombre} - ${claseInscrita.descripcion}</span>
+                        <button class="btn btn-danger btn-baja-clase" data-clase-id="${claseInscrita.id}">Dar de Baja</button>
+                    `;
                     listaInscripciones.appendChild(li);
                 });
             } else {

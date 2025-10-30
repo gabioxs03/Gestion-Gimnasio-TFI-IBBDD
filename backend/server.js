@@ -14,8 +14,9 @@ app.use(express.json()); // Permite al servidor entender JSON en el cuerpo de la
 const dbConfig = {
     user: 'gimnasio_user',           // El usuario que creaste en el Paso 2
     password: 'P@ssw0rdG1m',         // La contraseña que definiste en el Paso 2
-    server: 'localhost\\SQLEXPRESS',
-    // port: 61709,                     // El puerto dinámico que encontraste. ¡Correcto!
+    server: 'localhost\\SQLEXPRESS', // Ajusta si usas instancia diferente
+    // Si usas puerto explícito, descomenta y coloca el puerto correcto:
+    // port: 1433,
     database: 'DB_TFI_GestionGim',   // El nombre correcto de tu base de datos
     options: {
         // trustedConnection: true,
@@ -40,9 +41,7 @@ pool.on('error', err => {
  */
 app.get('/api/clases', async (req, res) => {    
     try {
-        // Asegurarse de que el pool esté conectado antes de usarlo
         await poolConnect; 
-        // Usar el pool para ejecutar la consulta
         const result = await pool.request().query("SELECT ClaseID as id, Nombre as nombre, CONVERT(VARCHAR(5), Horario, 108) as descripcion FROM Clase");
         res.json(result.recordset);
     } catch (err) {
@@ -59,26 +58,23 @@ app.get('/api/socios/:id', async (req, res) => {
     const socioIdBuscado = req.params.id;
     try {
         await poolConnect;
-        // Consulta que une Socios, Inscripciones y Clases para obtener toda la info
         const result = await pool.request().input('socioId', sql.Int, socioIdBuscado).query(`
             SELECT 
-                S.SocioID, S.Nombre, S.Apellido, S.Email, -- Columnas de Socio
-                C.ClaseID, C.Nombre as claseNombre, CONVERT(VARCHAR(5), C.Horario, 108) as claseDescripcion -- Columnas de Clase con alias en minúscula
+                S.SocioID, S.Nombre, S.Apellido, S.Email,
+                C.ClaseID, C.Nombre as claseNombre, CONVERT(VARCHAR(5), C.Horario, 108) as claseDescripcion
             FROM Socio S
             LEFT JOIN Inscripcion I ON S.SocioID = I.SocioID
             LEFT JOIN Clase C ON I.ClaseID = C.ClaseID
             WHERE S.SocioID = @socioId`);
 
         if (result.recordset.length > 0) {
-            // El socio existe. Ahora formateamos la respuesta como la esperaba el frontend.
             const socioInfo = result.recordset[0];
             const socio = {
                 id: socioInfo.SocioID,
                 nombre: `${socioInfo.Nombre} ${socioInfo.Apellido}`,
                 email: socioInfo.Email,
-                // Creamos el array de inscripciones a partir del resultado del JOIN
                 inscripciones: result.recordset
-                    .filter(r => r.ClaseID !== null) // Filtramos en caso de que el socio no tenga inscripciones
+                    .filter(r => r.ClaseID !== null)
                     .map(r => ({ 
                         id: r.ClaseID, 
                         nombre: r.claseNombre, 
@@ -98,36 +94,34 @@ app.get('/api/socios/:id', async (req, res) => {
 /**
  * Endpoint para dar de baja (lógica) a un socio.
  * DELETE /api/socios/:id
- * Esto activará el trigger TR_BajaLogica_Socio
+ * Esto activará el trigger TR_BajaLogica_Socio y liberará cupos vía triggers en Inscripcion.
  */
 app.delete('/api/socios/:id', async (req, res) => {
     const socioId = req.params.id;
     try {
-        // Usaremos una transacción para asegurar que ambas operaciones (borrar inscripciones y dar de baja al socio)
-        // se completen correctamente. Si una falla, se revierte todo.
+        await poolConnect;
+
+        // Usamos transacción para asegurar consistencia al borrar inscripciones y dar de baja al socio.
         const transaction = new sql.Transaction(pool);
         await transaction.begin();
         const request = new sql.Request(transaction);
 
         try {
-            // 1. Borrar todas las inscripciones del socio.
-            // Esto activará el trigger TR_ActualizarCupos_BajaInscripcion para cada clase, liberando los cupos.
-            await request.input('socioIdInsc', sql.Int, socioId).query('DELETE FROM Inscripcion WHERE SocioID = @socioIdInsc');
+            // 1. Borrar todas las inscripciones del socio (dispara trigger para actualizar cupos).
+            await request.input('socioIdInsc', sql.Int, socioId)
+                .query('DELETE FROM Inscripcion WHERE SocioID = @socioIdInsc');
 
-            // 2. Dar de baja lógica al socio.
-            // Esto activará el trigger TR_BajaLogica_Socio.
-            await request.input('socioIdSocio', sql.Int, socioId).query('DELETE FROM Socio WHERE SocioID = @socioIdSocio');
+            // 2. Dar de baja lógica al socio (trigger INSTEAD OF o similar).
+            await request.input('socioIdSocio', sql.Int, socioId)
+                .query('DELETE FROM Socio WHERE SocioID = @socioIdSocio');
 
-            // Si todo fue bien, confirmamos la transacción.
             await transaction.commit();
 
             res.status(200).json({ message: `Socio con ID ${socioId} ha sido dado de baja y sus inscripciones han sido canceladas.` });
-
         } catch (err) {
-            // Si algo falla, revertimos la transacción.
             await transaction.rollback();
             console.error('Error en la transacción de baja de socio:', err);
-            throw err; // Lanzamos el error para que lo capture el catch principal.
+            res.status(500).json({ message: 'Error al procesar la baja del socio.' });
         }
 
     } catch (err) {
@@ -141,7 +135,7 @@ app.delete('/api/socios/:id', async (req, res) => {
  * POST /api/inscripciones
  */
 app.post('/api/inscripciones', async (req, res) => {
-    const { socioId, claseId } = req.body; // Recibimos los IDs desde el frontend
+    const { socioId, claseId } = req.body;
 
     if (!socioId || !claseId) {
         return res.status(400).json({ message: 'Faltan socioId o claseId' });
@@ -149,22 +143,19 @@ app.post('/api/inscripciones', async (req, res) => {
 
     try {
         await poolConnect;
-        // Ejecutamos el Stored Procedure que maneja la lógica de inscripción y cupos
         const result = await pool.request()
             .input('socioId', sql.Int, socioId)
             .input('claseId', sql.Int, claseId)
             .execute('SP_InscribirSocioEnClase');
         
-        // El Stored Procedure devuelve un resultado con Mensaje y CodigoError
-        const spResult = result.recordset[0];
+        const spResult = result.recordset && result.recordset[0];
 
-        if (spResult.CodigoError === 0) {
-            // Éxito
+        if (spResult && spResult.CodigoError === 0) {
             res.status(201).json({ message: spResult.Mensaje });
-        } else {
-            // Error de lógica de negocio (sin cupos, ya inscripto, etc.)
-            // Usamos 409 Conflict para indicar que la petición no se pudo procesar por el estado actual del recurso.
+        } else if (spResult) {
             res.status(409).json({ message: spResult.Mensaje });
+        } else {
+            res.status(500).json({ message: 'Stored procedure no devolvió resultado esperado.' });
         }
     } catch (err) {
         console.error('Error inesperado al ejecutar el Stored Procedure:', err);
@@ -188,17 +179,15 @@ app.delete('/api/inscripciones', async (req, res) => {
         await poolConnect;
         const request = pool.request();
 
-        // 1. Intentar eliminar la inscripción.
         const resultDelete = await request
             .input('socioId', sql.Int, socioId)
             .input('claseId', sql.Int, claseId)
             .query('DELETE FROM Inscripcion WHERE SocioID = @socioId AND ClaseID = @claseId');
 
-        if (resultDelete.rowsAffected[0] > 0) {
+        if (resultDelete.rowsAffected && resultDelete.rowsAffected[0] > 0) {
             // El trigger TR_ActualizarCupos_BajaInscripcion se encarga de liberar el cupo.
             res.status(200).json({ message: 'Inscripción dada de baja correctamente.' });
         } else {
-            // Si no se afectaron filas, es porque la inscripción no existía.
             res.status(404).json({ message: 'No se encontró la inscripción para dar de baja.' });
         }
     } catch (err) {
@@ -209,8 +198,8 @@ app.delete('/api/inscripciones', async (req, res) => {
 
 /*
  * Endpoint para registrar un nuevo socio.
-* POST /api/socios
-*/
+ * POST /api/socios
+ */
 app.post('/api/socios', async (req, res) => {
     const { nombre, apellido, email } = req.body;
     if (!nombre || !apellido || !email) {
@@ -227,7 +216,7 @@ app.post('/api/socios', async (req, res) => {
                 VALUES (@nombre, @apellido, @email, 1);
                 SELECT SCOPE_IDENTITY() AS nuevoSocioId; -- Obtener el ID del nuevo socio
             `);
-        const nuevoSocioId = result.recordset[0].nuevoSocioId;
+        const nuevoSocioId = result.recordset[0] && result.recordset[0].nuevoSocioId;
         if (nuevoSocioId) {
             res.status(201).json({ message: 'Socio registrado exitosamente', socioId: nuevoSocioId });
         } else {
